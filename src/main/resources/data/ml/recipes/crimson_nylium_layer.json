@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:crimson_nylium"
+  },
+  "result": "ml:crimson_nylium_layer",
+  "count": 8
+}

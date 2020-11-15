@@ -1,0 +1,1 @@
+{"type": "minecraft:crafting_shaped","pattern": ["##"],"key": {"#": {"item": "minecraft:hay_block"}},"result": {"item": "ml:hay_block_layer","count": 8}}

@@ -1,0 +1,1 @@
+{"type": "minecraft:crafting_shaped","pattern": ["##"],"key": {"#": {"item": "minecraft:grass_path"}},"result": {"item": "ml:grass_path_layer","count": 16}}

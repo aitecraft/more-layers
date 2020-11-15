@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "ml",
+  "version": "2.5.0",
+
+  "name": "More Layers",
+  "description": "Adds layers for blocks like dirt, grass and leaves",
+  "authors": [
+    "MCrafterzz"
+  ],
+  "entrypoints": {
+    "main": [
+      "ml.MoreLayers"
+    ],
+	"client":[
+	  "ml.MoreLayersClient"
+	]
+  },
+
+  "depends": {
+    "fabricloader": ">=0.4.0",
+    "fabric": "*",
+    "minecraft": ">=1.16.3"
+  }
+}

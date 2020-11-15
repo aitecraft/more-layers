@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:crying_obsidian"
+  },
+  "result": "ml:crying_obsidian_layer",
+  "count": 8
+}
