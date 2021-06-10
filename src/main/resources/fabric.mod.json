@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "ml",
-  "version": "2.5.0",
+  "version": "2.5.2",
 
   "name": "More Layers",
   "description": "Adds layers for blocks like dirt, grass and leaves",
@@ -20,6 +20,7 @@
   "depends": {
     "fabricloader": ">=0.4.0",
     "fabric": "*",
-    "minecraft": ">=1.16.3"
+    "minecraft": ">=1.17",
+    "java": ">=16"
   }
 }

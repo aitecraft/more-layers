@@ -2,30 +2,31 @@ package ml;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.block.BlockState;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.tag.Tag;
-import net.minecraft.item.ShovelItem;
-import net.minecraft.item.PickaxeItem;
-import net.minecraft.block.SnowBlock;
-import net.minecraft.world.GameMode;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.util.registry.Registry;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags;
-import net.minecraft.block.Blocks;
-import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder;
-import net.minecraft.util.Identifier;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.block.Block;
-import net.minecraft.item.ItemGroup;
+
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.SnowBlock;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemConvertible;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.PickaxeItem;
+import net.minecraft.item.ShovelItem;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.state.property.IntProperty;
+import net.minecraft.tag.Tag;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.world.GameMode;
 
 public class MoreLayers implements ModInitializer {
     public static ItemGroup itemGroup;
@@ -76,7 +77,7 @@ public class MoreLayers implements ModInitializer {
     public static Block coarse_dirt_layer;
     public static Block dirt_layer;
     public static Block grass_block_layer;
-    public static Block grass_path_layer;
+    public static Block dirt_path_layer;
     public static Block mycelium_layer;
     public static Block podzol_layer;
     
@@ -108,13 +109,25 @@ public class MoreLayers implements ModInitializer {
         this.registerBlocks();
         
         UseBlockCallback.EVENT.register(((player, world, hand, hitResult) -> {
+            // If code is running client-side or if the player isn't sneaking, skip the conversion.
             if (world.isClient || !player.isSneaking()) {
                 return ActionResult.PASS;
             }
+            
+            // If player isn't in Survival or Creative gamemodes, skip the conversion.
             if (((ServerPlayerEntity)player).interactionManager.getGameMode() != GameMode.SURVIVAL && ((ServerPlayerEntity)player).interactionManager.getGameMode() != GameMode.CREATIVE) {
                 return ActionResult.PASS;
             }
+
+            // If player has a block in offhand, skip the conversion.
+            if (player.getOffHandStack().getItem() instanceof BlockItem)
+            {
+                return ActionResult.PASS;
+            }
+
             final Block block = world.getBlockState(hitResult.getBlockPos()).getBlock();
+            
+            // If targetted Block is a "layer" block...
             if (block instanceof SnowBlock || block instanceof BlockLayer || block instanceof BlockConcretePowderLayer) {
                 if ((MoreLayers.pickaxeBlocks.contains(block) && player.getStackInHand(hand).getItem() instanceof PickaxeItem) || (!MoreLayers.pickaxeBlocks.contains(block) && player.getStackInHand(hand).getItem() instanceof ShovelItem)) {
                     final int newHeight = (int)world.getBlockState(hitResult.getBlockPos()).get((IntProperty)BlockLayer.LAYERS) - 1;
@@ -133,7 +146,9 @@ public class MoreLayers implements ModInitializer {
                 }
                 return ActionResult.PASS;
             }
+            // If not a layer block...
             else {
+                // If targetted block doesn't exist in layered form, skip the conversion.
                 if (MoreLayers.blockConversions.get((Object)block) == null) {
                     return ActionResult.PASS;
                 }
@@ -148,13 +163,52 @@ public class MoreLayers implements ModInitializer {
         }));
     }
     
+    // Todo disable layer conversion for very high hardness blocks, like obsidian
+
+
+    /* 
+    // WIP Data Fixer Code,
+    // Just gave up at this point
+    // and decided to keep grass path layer's name as-is
+    // waiting until a library or something gets published to help with this
+    // Keeping code here for future reference
+
+    private void fixData() {
+        final int dataVersion = 1;
+        
+        DataFixerBuilder builder = new DataFixerBuilder(dataVersion);
+        
+        //builder.addSchema(0, ModDataFixes.MOD_SCHEMA);
+        Schema latest_vanilla = Schemas.getFixer().getSchema(SharedConstants.getGameVersion().getWorldVersion());
+        Schema mod_schema = new Schema(0, latest_vanilla);
+
+        builder.addSchema(0, (_a, _b) -> mod_schema);
+
+        Schema schemaV1 = builder.addSchema(1, IdentifierNormalizingSchema::new);
+        
+        builder.addFixer(ItemNameFix.create(schemaV1, "Renamed Grass Path Layer item to Dirt Path Layer", replacing("ml:grass_path_layer", "ml:dirt_path_layer")));
+        builder.addFixer(JigsawBlockNameFix.create(schemaV1, "Renamed Grass Path Layer block to Dirt Path Layer", replacing("ml:grass_path_layer", "ml:dirt_path_layer")));
+        
+        DataFixer fixer = builder.build(Util.getMainWorkerExecutor());
+
+
+        
+    }
+
+    private static UnaryOperator<String> replacing(String oldId, String newId) {
+        return (inputName)
+            -> Objects.equals(IdentifierNormalizingSchema.normalize(inputName), oldId) ? newId : inputName;
+    }
+
+    */
+
     private void registerBlocks() {
         MoreLayers.dirt_layer = this.registerShovelBlock(Blocks.DIRT);
         MoreLayers.coarse_dirt_layer = this.registerShovelBlock(Blocks.COARSE_DIRT);
         MoreLayers.podzol_layer = this.registerShovelBlock(Blocks.PODZOL);
         MoreLayers.mycelium_layer = this.registerShovelBlock(Blocks.MYCELIUM);
         MoreLayers.grass_block_layer = this.registerShovelBlock(Blocks.GRASS_BLOCK);
-        MoreLayers.grass_path_layer = this.registerShovelBlock(Blocks.GRASS_PATH);
+        MoreLayers.dirt_path_layer = this.registerShovelBlockUniqueName(Blocks.DIRT_PATH, "grass_path");
         MoreLayers.sandstone_layer = this.registerPickaxeBlock(Blocks.SANDSTONE);
         MoreLayers.red_sandstone_layer = this.registerPickaxeBlock(Blocks.RED_SANDSTONE);
         MoreLayers.hay_block_layer = this.registerHoeBlock(Blocks.HAY_BLOCK);
@@ -200,6 +254,12 @@ public class MoreLayers implements ModInitializer {
         MoreLayers.gravel_layer = this.registerConcretePowderBlock(Blocks.GRAVEL);
     }
     
+    private Block registerBlockUniqueName(final Block src, final Tag<Item> tool, final boolean breakByHand, final String name) {
+        final Block res = new BlockLayer(src, tool, breakByHand);
+        registerSuperCommon(src, res, name);
+        return res;
+    }
+
     private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand) {
         final Block block2 = new BlockLayer(block, tool, breakByHand);
         registerCommon(block, block2);
@@ -208,6 +268,10 @@ public class MoreLayers implements ModInitializer {
 
     private Block registerShovelBlock(final Block block) {
         return registerBlock(block, FabricToolTags.SHOVELS, true);
+    }
+
+    private Block registerShovelBlockUniqueName(final Block block, final String name) {
+        return registerBlockUniqueName(block, FabricToolTags.SHOVELS, true, name);
     }
 
     private Block registerPickaxeBlock(final Block block, final boolean breakByHand) {
@@ -232,11 +296,20 @@ public class MoreLayers implements ModInitializer {
         return block2;
     }
 
-    private void registerCommon(final Block block, final Block block2) {
-        Registry.register(Registry.BLOCK, new Identifier("ml", block.getTranslationKey().replace("block.minecraft.", "") + "_layer"), block2);
-        final BlockItem blockItem = new BlockItem(block2, new Item.Settings().group(MoreLayers.itemGroup));
-        Registry.register(Registry.ITEM, new Identifier("ml", block.getTranslationKey().replace("block.minecraft.", "") + "_layer"), blockItem);
-        blockConversions.put(block, block2);
+    private void registerSuperCommon(final Block src_block, final Block res_block, String res_block_name) {
+        res_block_name +=  "_layer";
+
+        Registry.register(Registry.BLOCK, new Identifier("ml", res_block_name), res_block);
+        
+        final BlockItem blockItem = new BlockItem(res_block, new Item.Settings().group(MoreLayers.itemGroup));
+        Registry.register(Registry.ITEM, new Identifier("ml", res_block_name), blockItem);
+        
+        blockConversions.put(src_block, res_block);
+    }
+
+    private void registerCommon(final Block src_block, final Block res_block) {
+        final String name = src_block.getTranslationKey().replace("block.minecraft.", "");
+        registerSuperCommon(src_block, res_block, name);
     }
     
     static {
