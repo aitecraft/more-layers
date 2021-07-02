@@ -1,8 +1,6 @@
 package ml;
 
-import java.util.ArrayList;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 import net.fabricmc.api.ModInitializer;
@@ -10,10 +8,10 @@ import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SnowBlock;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.HoeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemGroup;
@@ -21,7 +19,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.PickaxeItem;
 import net.minecraft.item.ShovelItem;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.state.property.IntProperty;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
@@ -62,6 +59,9 @@ public class MoreLayers implements ModInitializer {
     public static Block jungle_leaves_layer;
     public static Block oak_leaves_layer;
     public static Block spruce_leaves_layer;
+    // 1.17 Leaves
+    public static Block azalea_leaves_layer;
+    public static Block flowering_azalea_leaves_layer;
     
     // Stone and Variants
     public static Block andesite_layer;
@@ -72,6 +72,9 @@ public class MoreLayers implements ModInitializer {
     public static Block stone_layer;
     public static Block sandstone_layer;
     public static Block red_sandstone_layer;
+    // 1.17 Stuff
+    public static Block cobbled_deepslate_layer;
+    public static Block deepslate_layer;
     
     // Dirt and Grass Variants
     public static Block coarse_dirt_layer;
@@ -96,9 +99,17 @@ public class MoreLayers implements ModInitializer {
     public static Block crying_obsidian_layer;
     public static Block hay_block_layer;
 
-
+    // Minecraft Block -> Blocklayer Block
     public static Map<Block, Block> blockConversions;
-    public static List<Block> pickaxeBlocks;
+
+    // BlockLayer Block -> Mining Tool
+    public static Map<Block, MiningTool> blockTools;
+
+    public enum MiningTool {
+        PICKAXE,
+        SHOVEL,
+        HOE
+    }
     
     public void onInitialize() {
         MoreLayers.itemGroup = FabricItemGroupBuilder.create(new Identifier("ml", "layers")).appendItems(itemStacks -> Registry.ITEM.forEach(item -> {
@@ -108,14 +119,21 @@ public class MoreLayers implements ModInitializer {
         })).icon(() -> new ItemStack((ItemConvertible)MoreLayers.grass_block_layer)).build();
         this.registerBlocks();
         
+        ResourcesManager.RegisterCallback();
+
         UseBlockCallback.EVENT.register(((player, world, hand, hitResult) -> {
+            
             // If code is running client-side or if the player isn't sneaking, skip the conversion.
             if (world.isClient || !player.isSneaking()) {
                 return ActionResult.PASS;
             }
             
             // If player isn't in Survival or Creative gamemodes, skip the conversion.
-            if (((ServerPlayerEntity)player).interactionManager.getGameMode() != GameMode.SURVIVAL && ((ServerPlayerEntity)player).interactionManager.getGameMode() != GameMode.CREATIVE) {
+            GameMode gameMode = ((ServerPlayerEntity)player).interactionManager.getGameMode();
+            if (
+                gameMode != GameMode.SURVIVAL &&
+                gameMode != GameMode.CREATIVE
+            ) {
                 return ActionResult.PASS;
             }
 
@@ -129,38 +147,74 @@ public class MoreLayers implements ModInitializer {
             
             // If targetted Block is a "layer" block...
             if (block instanceof SnowBlock || block instanceof BlockLayer || block instanceof BlockConcretePowderLayer) {
-                if ((MoreLayers.pickaxeBlocks.contains(block) && player.getStackInHand(hand).getItem() instanceof PickaxeItem) || (!MoreLayers.pickaxeBlocks.contains(block) && player.getStackInHand(hand).getItem() instanceof ShovelItem)) {
-                    final int newHeight = (int)world.getBlockState(hitResult.getBlockPos()).get((IntProperty)BlockLayer.LAYERS) - 1;
+                if (isCorrectTool(block, player.getStackInHand(hand).getItem())) {
+                    final int newHeight = world.getBlockState(hitResult.getBlockPos()).get(BlockLayer.LAYERS) - 1;
+                    
                     if (newHeight == 0) {
                         world.breakBlock(hitResult.getBlockPos(), true);
                     }
-                    else {
+                    else {    
                         world.setBlockState(
                             hitResult.getBlockPos(),
-                            (BlockState)world.getBlockState(hitResult.getBlockPos()).with(BlockLayer.LAYERS, newHeight)
+                            world.getBlockState(hitResult.getBlockPos()).with(BlockLayer.LAYERS, newHeight)
                         );
-                        Block.dropStack(world, hitResult.getBlockPos(), new ItemStack((ItemConvertible)block.asItem()));
+
+                        Block.dropStack(world, hitResult.getBlockPos(), new ItemStack(block.asItem()));
                     }
+
                     player.getStackInHand(hand).damage(1, player, null);
                     return ActionResult.SUCCESS;
                 }
                 return ActionResult.PASS;
             }
+            
             // If not a layer block...
             else {
                 // If targetted block doesn't exist in layered form, skip the conversion.
-                if (MoreLayers.blockConversions.get((Object)block) == null) {
+                if (MoreLayers.blockConversions.get(block) == null) {
                     return ActionResult.PASS;
                 }
-                final Block layerBlock = (Block)MoreLayers.blockConversions.get((Object)block);
-                if ((MoreLayers.pickaxeBlocks.contains((Object)layerBlock) && player.getStackInHand(hand).getItem() instanceof PickaxeItem) || (!MoreLayers.pickaxeBlocks.contains((Object)layerBlock) && player.getStackInHand(hand).getItem() instanceof ShovelItem)) {
-                    world.setBlockState(hitResult.getBlockPos(), (BlockState)layerBlock.getDefaultState().with(BlockLayer.LAYERS, 8));
+                
+                final Block layerBlock = MoreLayers.blockConversions.get(block);
+
+
+                if (isCorrectTool(layerBlock, player.getStackInHand(hand).getItem())) {
+                    world.setBlockState(hitResult.getBlockPos(), layerBlock.getDefaultState().with(BlockLayer.LAYERS, 8));
                     player.getStackInHand(hand).damage(1, player, null);
                     return ActionResult.SUCCESS;
                 }
                 return ActionResult.PASS;
             }
         }));
+    }
+
+    /**
+     * ONLY CALL FOR MORELAYERS BLOCKS
+     * @param block : A MoreLayers Block
+     * @param item : The item used by the player
+     * @return <code>true</code>, if <code>item</code> is the correct tool to mine <code>block</code>
+     */
+    private boolean isCorrectTool(Block block, Item item) {
+        MiningTool correctTool = blockTools.get(block);
+
+        if (correctTool == null)
+            return false;
+
+        boolean isCorrect = false;
+
+        switch(correctTool) {
+            case PICKAXE:
+                isCorrect = item instanceof PickaxeItem;
+                break;
+            case HOE:
+                isCorrect = item instanceof HoeItem;
+                break;
+            case SHOVEL:
+                isCorrect = item instanceof ShovelItem;
+                break;
+        }
+
+        return isCorrect;
     }
     
     // Todo disable layer conversion for very high hardness blocks, like obsidian
@@ -203,117 +257,134 @@ public class MoreLayers implements ModInitializer {
     */
 
     private void registerBlocks() {
-        MoreLayers.dirt_layer = this.registerShovelBlock(Blocks.DIRT);
-        MoreLayers.coarse_dirt_layer = this.registerShovelBlock(Blocks.COARSE_DIRT);
-        MoreLayers.podzol_layer = this.registerShovelBlock(Blocks.PODZOL);
-        MoreLayers.mycelium_layer = this.registerShovelBlock(Blocks.MYCELIUM);
-        MoreLayers.grass_block_layer = this.registerShovelBlock(Blocks.GRASS_BLOCK);
-        MoreLayers.dirt_path_layer = this.registerShovelBlockUniqueName(Blocks.DIRT_PATH, "grass_path");
-        MoreLayers.sandstone_layer = this.registerPickaxeBlock(Blocks.SANDSTONE);
-        MoreLayers.red_sandstone_layer = this.registerPickaxeBlock(Blocks.RED_SANDSTONE);
-        MoreLayers.hay_block_layer = this.registerHoeBlock(Blocks.HAY_BLOCK);
-        MoreLayers.cobblestone_layer = this.registerPickaxeBlock(Blocks.COBBLESTONE);
-        MoreLayers.mossy_cobblestone_layer = this.registerPickaxeBlock(Blocks.MOSSY_COBBLESTONE);
-        MoreLayers.stone_layer = this.registerPickaxeBlock(Blocks.STONE);
-        MoreLayers.granite_layer = this.registerPickaxeBlock(Blocks.GRANITE);
-        MoreLayers.diorite_layer = this.registerPickaxeBlock(Blocks.DIORITE);
-        MoreLayers.andesite_layer = this.registerPickaxeBlock(Blocks.ANDESITE);
-        MoreLayers.obsidian_layer = this.registerPickaxeBlock(Blocks.OBSIDIAN);
-        MoreLayers.nether_rack_layer = this.registerPickaxeBlock(Blocks.NETHERRACK);
-        MoreLayers.end_stone_layer = this.registerPickaxeBlock(Blocks.END_STONE);
-        MoreLayers.blackstone_layer = this.registerPickaxeBlock(Blocks.BLACKSTONE);
-        MoreLayers.basalt_layer = this.registerPickaxeBlock(Blocks.BASALT);
-        MoreLayers.crying_obsidian_layer = this.registerPickaxeBlock(Blocks.CRYING_OBSIDIAN);
-        MoreLayers.warped_nylium_layer = this.registerPickaxeBlock(Blocks.WARPED_NYLIUM);
-        MoreLayers.crimson_nylium_layer = this.registerPickaxeBlock(Blocks.CRIMSON_NYLIUM);
-        MoreLayers.oak_leaves_layer = this.registerHoeBlock(Blocks.OAK_LEAVES);
-        MoreLayers.birch_leaves_layer = this.registerHoeBlock(Blocks.BIRCH_LEAVES);
-        MoreLayers.jungle_leaves_layer = this.registerHoeBlock(Blocks.JUNGLE_LEAVES);
-        MoreLayers.spruce_leaves_layer = this.registerHoeBlock(Blocks.SPRUCE_LEAVES);
-        MoreLayers.dark_oak_leaves_layer = this.registerHoeBlock(Blocks.DARK_OAK_LEAVES);
-        MoreLayers.acacia_leaves_layer = this.registerHoeBlock(Blocks.ACACIA_LEAVES);
-        
-        MoreLayers.white_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.WHITE_CONCRETE_POWDER);
-        MoreLayers.orange_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.ORANGE_CONCRETE_POWDER);
-        MoreLayers.magenta_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.MAGENTA_CONCRETE_POWDER);
-        MoreLayers.light_blue_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.LIGHT_BLUE_CONCRETE_POWDER);
-        MoreLayers.yellow_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.YELLOW_CONCRETE_POWDER);
-        MoreLayers.lime_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.LIME_CONCRETE_POWDER);
-        MoreLayers.pink_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.PINK_CONCRETE_POWDER);
-        MoreLayers.gray_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.GRAY_CONCRETE_POWDER);
-        MoreLayers.light_gray_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.LIGHT_GRAY_CONCRETE_POWDER);
-        MoreLayers.cyan_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.CYAN_CONCRETE_POWDER);
-        MoreLayers.purple_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.PURPLE_CONCRETE_POWDER);
-        MoreLayers.blue_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.BLUE_CONCRETE_POWDER);
-        MoreLayers.brown_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.BROWN_CONCRETE_POWDER);
-        MoreLayers.green_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.GREEN_CONCRETE_POWDER);
-        MoreLayers.red_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.RED_CONCRETE_POWDER);
-        MoreLayers.black_concrete_powder_layer = this.registerConcretePowderBlock(Blocks.BLACK_CONCRETE_POWDER);
-        MoreLayers.sand_layer = this.registerConcretePowderBlock(Blocks.SAND);
-        MoreLayers.red_sand_layer = this.registerConcretePowderBlock(Blocks.RED_SAND);
-        MoreLayers.gravel_layer = this.registerConcretePowderBlock(Blocks.GRAVEL);
-    }
+        dirt_layer = registerShovelBlock(Blocks.DIRT);
+        coarse_dirt_layer = registerShovelBlock(Blocks.COARSE_DIRT);
+        podzol_layer = registerShovelBlock(Blocks.PODZOL);
+        mycelium_layer = registerShovelBlock(Blocks.MYCELIUM);
+        grass_block_layer = registerShovelBlock(Blocks.GRASS_BLOCK);
+        dirt_path_layer = registerShovelBlock(Blocks.DIRT_PATH, "grass_path");
     
-    private Block registerBlockUniqueName(final Block src, final Tag<Item> tool, final boolean breakByHand, final String name) {
-        final Block res = new BlockLayer(src, tool, breakByHand);
-        registerSuperCommon(src, res, name);
-        return res;
-    }
+        hay_block_layer = registerHoeBlock(Blocks.HAY_BLOCK);
+        oak_leaves_layer = registerHoeBlock(Blocks.OAK_LEAVES);
+        birch_leaves_layer = registerHoeBlock(Blocks.BIRCH_LEAVES);
+        jungle_leaves_layer = registerHoeBlock(Blocks.JUNGLE_LEAVES);
+        spruce_leaves_layer = registerHoeBlock(Blocks.SPRUCE_LEAVES);
+        dark_oak_leaves_layer = registerHoeBlock(Blocks.DARK_OAK_LEAVES);
+        acacia_leaves_layer = registerHoeBlock(Blocks.ACACIA_LEAVES);
+        azalea_leaves_layer = registerHoeBlock(Blocks.AZALEA_LEAVES);
+        flowering_azalea_leaves_layer = registerHoeBlock(Blocks.FLOWERING_AZALEA_LEAVES);
+    
+        sandstone_layer = registerPickaxeBlock(Blocks.SANDSTONE);
+        red_sandstone_layer = registerPickaxeBlock(Blocks.RED_SANDSTONE);
+        cobblestone_layer = registerPickaxeBlock(Blocks.COBBLESTONE);
+        mossy_cobblestone_layer = registerPickaxeBlock(Blocks.MOSSY_COBBLESTONE);
+        stone_layer = registerPickaxeBlock(Blocks.STONE);
+        granite_layer = registerPickaxeBlock(Blocks.GRANITE);
+        diorite_layer = registerPickaxeBlock(Blocks.DIORITE);
+        andesite_layer = registerPickaxeBlock(Blocks.ANDESITE);
+        obsidian_layer = registerPickaxeBlock(Blocks.OBSIDIAN);
+        nether_rack_layer = registerPickaxeBlock(Blocks.NETHERRACK);
+        end_stone_layer = registerPickaxeBlock(Blocks.END_STONE);
+        blackstone_layer = registerPickaxeBlock(Blocks.BLACKSTONE);
+        basalt_layer = registerPickaxeBlock(Blocks.BASALT);
+        crying_obsidian_layer = registerPickaxeBlock(Blocks.CRYING_OBSIDIAN);
+        warped_nylium_layer = registerPickaxeBlock(Blocks.WARPED_NYLIUM);
+        crimson_nylium_layer = registerPickaxeBlock(Blocks.CRIMSON_NYLIUM);
+        cobbled_deepslate_layer = registerPickaxeBlock(Blocks.COBBLED_DEEPSLATE);
+        deepslate_layer = registerPickaxeBlock(Blocks.DEEPSLATE);
 
-    private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand) {
-        final Block block2 = new BlockLayer(block, tool, breakByHand);
-        registerCommon(block, block2);
-        return block2;
+        white_concrete_powder_layer = registerConcretePowderBlock(Blocks.WHITE_CONCRETE_POWDER);
+        orange_concrete_powder_layer = registerConcretePowderBlock(Blocks.ORANGE_CONCRETE_POWDER);
+        magenta_concrete_powder_layer = registerConcretePowderBlock(Blocks.MAGENTA_CONCRETE_POWDER);
+        light_blue_concrete_powder_layer = registerConcretePowderBlock(Blocks.LIGHT_BLUE_CONCRETE_POWDER);
+        yellow_concrete_powder_layer = registerConcretePowderBlock(Blocks.YELLOW_CONCRETE_POWDER);
+        lime_concrete_powder_layer = registerConcretePowderBlock(Blocks.LIME_CONCRETE_POWDER);
+        pink_concrete_powder_layer = registerConcretePowderBlock(Blocks.PINK_CONCRETE_POWDER);
+        gray_concrete_powder_layer = registerConcretePowderBlock(Blocks.GRAY_CONCRETE_POWDER);
+        light_gray_concrete_powder_layer = registerConcretePowderBlock(Blocks.LIGHT_GRAY_CONCRETE_POWDER);
+        cyan_concrete_powder_layer = registerConcretePowderBlock(Blocks.CYAN_CONCRETE_POWDER);
+        purple_concrete_powder_layer = registerConcretePowderBlock(Blocks.PURPLE_CONCRETE_POWDER);
+        blue_concrete_powder_layer = registerConcretePowderBlock(Blocks.BLUE_CONCRETE_POWDER);
+        brown_concrete_powder_layer = registerConcretePowderBlock(Blocks.BROWN_CONCRETE_POWDER);
+        green_concrete_powder_layer = registerConcretePowderBlock(Blocks.GREEN_CONCRETE_POWDER);
+        red_concrete_powder_layer = registerConcretePowderBlock(Blocks.RED_CONCRETE_POWDER);
+        black_concrete_powder_layer = registerConcretePowderBlock(Blocks.BLACK_CONCRETE_POWDER);
+        sand_layer = registerConcretePowderBlock(Blocks.SAND);
+        red_sand_layer = registerConcretePowderBlock(Blocks.RED_SAND);
+        gravel_layer = registerConcretePowderBlock(Blocks.GRAVEL);
     }
 
     private Block registerShovelBlock(final Block block) {
-        return registerBlock(block, FabricToolTags.SHOVELS, true);
+        return registerShovelBlock(block, "");
     }
 
-    private Block registerShovelBlockUniqueName(final Block block, final String name) {
-        return registerBlockUniqueName(block, FabricToolTags.SHOVELS, true, name);
-    }
-
-    private Block registerPickaxeBlock(final Block block, final boolean breakByHand) {
-        Block block2 = registerBlock(block, FabricToolTags.PICKAXES, breakByHand);
-        pickaxeBlocks.add(block2);
-        return block2;
+    private Block registerShovelBlock(final Block block, final String name) {
+        Block res_block = registerBlock(block, FabricToolTags.SHOVELS, true, name);
+        blockTools.put(res_block, MiningTool.SHOVEL);
+        return res_block;
     }
 
     private Block registerPickaxeBlock(final Block block) {
-        return registerPickaxeBlock(block, false);
+        Block res_block = registerBlock(block, FabricToolTags.PICKAXES, false);
+        blockTools.put(res_block, MiningTool.PICKAXE);
+        return res_block;
     }
     
     private Block registerHoeBlock(final Block block) {
-        // Just point to shovel for now...
-        return registerShovelBlock(block);
+        Block res_block = registerBlock(block, FabricToolTags.HOES, true);
+        blockTools.put(res_block, MiningTool.HOE);
+        return res_block;
     }
 
-
+    private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand) {
+        return registerBlock(block, tool, breakByHand, "");
+    }
+    
+    private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand, final String name) {
+        final Block res = new BlockLayer(block, tool, breakByHand);
+        
+        boolean stonecutting = (tool == FabricToolTags.PICKAXES);
+        
+        if (name.isEmpty())
+            registerCommon(block, res, stonecutting);
+        else
+            registerCommon(block, res, name, stonecutting);
+        
+        return res;
+    }
+    
     private Block registerConcretePowderBlock(final Block block) {
         final Block block2 = new BlockConcretePowderLayer(block);
-        registerCommon(block, block2);
+        registerCommon(block, block2, false);
         return block2;
     }
+    
+    private void registerCommon(final Block src_block, final Block res_block, boolean stonecutting) {
+        final String name = src_block.getTranslationKey().replace("block.minecraft.", "");
+        registerCommon(src_block, res_block, name, stonecutting);
+    }
 
-    private void registerSuperCommon(final Block src_block, final Block res_block, String res_block_name) {
+    private void registerCommon(final Block src_block, final Block res_block, String res_block_name, boolean stonecutting) {
         res_block_name +=  "_layer";
 
+        // Register the block
         Registry.register(Registry.BLOCK, new Identifier("ml", res_block_name), res_block);
         
+        // Create and register BlockItem
         final BlockItem blockItem = new BlockItem(res_block, new Item.Settings().group(MoreLayers.itemGroup));
         Registry.register(Registry.ITEM, new Identifier("ml", res_block_name), blockItem);
         
+        // Add blocks to conversion list
         blockConversions.put(src_block, res_block);
-    }
 
-    private void registerCommon(final Block src_block, final Block res_block) {
-        final String name = src_block.getTranslationKey().replace("block.minecraft.", "");
-        registerSuperCommon(src_block, res_block, name);
+        // Generate Block Data
+        ResourcesManager.GenerateBlockData(blockItem, src_block, stonecutting);
     }
     
     static {
         MoreLayers.blockConversions = new Hashtable<Block, Block>();
-        MoreLayers.pickaxeBlocks = new ArrayList<Block>();
+        
+        MoreLayers.blockTools = new Hashtable<Block, MiningTool>();
+        blockTools.put(Blocks.SNOW_BLOCK, MiningTool.SHOVEL);
     }
 }

@@ -48,5 +48,9 @@
     "block.ml.blackstone_layer":"Blackstone Layer",
     "block.ml.basalt_layer":"Basalt Layer",
     "block.ml.crimson_nylium_layer":"Crimson Nylium Layer",
-    "block.ml.warped_nylium_layer":"Warped Nylium Layer"
+    "block.ml.warped_nylium_layer":"Warped Nylium Layer",
+	"block.ml.cobbled_deepslate_layer":"Cobbled Deepslate Layer",
+	"block.ml.deepslate_layer":"Deepslate Layer",
+	"block.ml.azalea_leaves_layer":"Azalea Leaves Layer",
+	"block.ml.flowering_azalea_leaves_layer":"Flowering Azalea Leaves Layer"
 }
