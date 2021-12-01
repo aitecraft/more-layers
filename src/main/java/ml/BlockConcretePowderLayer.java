@@ -15,7 +15,6 @@ import net.minecraft.world.BlockView;
 import net.minecraft.state.property.Property;
 import net.minecraft.block.BlockState;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
-import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags;
 import net.minecraft.block.Block;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.state.property.IntProperty;
@@ -27,7 +26,7 @@ public class BlockConcretePowderLayer extends FallingBlock {
     protected static final VoxelShape[] LAYERS_TO_SHAPE;
     
     protected BlockConcretePowderLayer(final Block block) {
-        super(FabricBlockSettings.copyOf(block).breakByTool(FabricToolTags.SHOVELS).breakByHand(true));
+        super(FabricBlockSettings.copyOf(block).breakByHand(true));
         this.setDefaultState((BlockState)this.getDefaultState().with(BlockConcretePowderLayer.LAYERS, 1));
     }
     

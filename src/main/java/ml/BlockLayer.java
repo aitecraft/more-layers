@@ -6,7 +6,6 @@ import net.minecraft.state.StateManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.util.math.Direction;
 import net.minecraft.block.Blocks;
@@ -16,7 +15,6 @@ import net.minecraft.world.WorldView;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.state.property.Property;
-import net.minecraft.tag.Tag;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.state.property.IntProperty;
@@ -27,8 +25,8 @@ public class BlockLayer extends Block {
     public static final IntProperty LAYERS;
     protected static final VoxelShape[] LAYERS_TO_SHAPE;
     
-    protected BlockLayer(final Block block, final Tag<Item> tool, final boolean breakByHand) {
-        super(FabricBlockSettings.copyOf(block).breakByTool(tool).breakByHand(breakByHand));
+    protected BlockLayer(final Block block, final boolean breakByHand) {
+        super(FabricBlockSettings.copyOf(block).breakByHand(breakByHand));
         this.setDefaultState(this.getDefaultState().with(BlockLayer.LAYERS, 1));
     }
     

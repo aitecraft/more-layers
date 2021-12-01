@@ -6,7 +6,6 @@ import java.util.Map;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SnowBlock;
@@ -19,7 +18,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.PickaxeItem;
 import net.minecraft.item.ShovelItem;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.tag.Tag;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
@@ -104,12 +102,6 @@ public class MoreLayers implements ModInitializer {
 
     // BlockLayer Block -> Mining Tool
     public static Map<Block, MiningTool> blockTools;
-
-    public enum MiningTool {
-        PICKAXE,
-        SHOVEL,
-        HOE
-    }
     
     public void onInitialize() {
         MoreLayers.itemGroup = FabricItemGroupBuilder.create(new Identifier("ml", "layers")).appendItems(itemStacks -> Registry.ITEM.forEach(item -> {
@@ -118,7 +110,8 @@ public class MoreLayers implements ModInitializer {
             }
         })).icon(() -> new ItemStack((ItemConvertible)MoreLayers.grass_block_layer)).build();
         this.registerBlocks();
-        
+        ResourcesManager.PushTags();
+                
         ResourcesManager.RegisterCallback();
 
         UseBlockCallback.EVENT.register(((player, world, hand, hitResult) -> {
@@ -319,52 +312,44 @@ public class MoreLayers implements ModInitializer {
     }
 
     private Block registerShovelBlock(final Block block, final String name) {
-        Block res_block = registerBlock(block, FabricToolTags.SHOVELS, true, name);
-        blockTools.put(res_block, MiningTool.SHOVEL);
-        return res_block;
+        return registerBlock(block, MiningTool.SHOVEL, true, name);
     }
 
     private Block registerPickaxeBlock(final Block block) {
-        Block res_block = registerBlock(block, FabricToolTags.PICKAXES, false);
-        blockTools.put(res_block, MiningTool.PICKAXE);
-        return res_block;
+        return registerBlock(block, MiningTool.PICKAXE, false);
     }
     
     private Block registerHoeBlock(final Block block) {
-        Block res_block = registerBlock(block, FabricToolTags.HOES, true);
-        blockTools.put(res_block, MiningTool.HOE);
-        return res_block;
+        return registerBlock(block, MiningTool.HOE, true);
     }
 
-    private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand) {
+    private Block registerConcretePowderBlock(final Block block) {
+        final Block block2 = new BlockConcretePowderLayer(block);
+        registerCommon(block, block2, MiningTool.SHOVEL);
+        return block2;
+    }
+
+    private Block registerBlock(final Block block, final MiningTool tool, final boolean breakByHand) {
         return registerBlock(block, tool, breakByHand, "");
     }
     
-    private Block registerBlock(final Block block, final Tag<Item> tool, final boolean breakByHand, final String name) {
-        final Block res = new BlockLayer(block, tool, breakByHand);
-        
-        boolean stonecutting = (tool == FabricToolTags.PICKAXES);
+    private Block registerBlock(final Block block, final MiningTool tool, final boolean breakByHand, final String name) {
+        final Block res = new BlockLayer(block, breakByHand);
         
         if (name.isEmpty())
-            registerCommon(block, res, stonecutting);
+            registerCommon(block, res, tool);
         else
-            registerCommon(block, res, name, stonecutting);
+            registerCommon(block, res, name, tool);
         
         return res;
     }
     
-    private Block registerConcretePowderBlock(final Block block) {
-        final Block block2 = new BlockConcretePowderLayer(block);
-        registerCommon(block, block2, false);
-        return block2;
-    }
-    
-    private void registerCommon(final Block src_block, final Block res_block, boolean stonecutting) {
+    private void registerCommon(final Block src_block, final Block res_block, MiningTool tool) {
         final String name = src_block.getTranslationKey().replace("block.minecraft.", "");
-        registerCommon(src_block, res_block, name, stonecutting);
+        registerCommon(src_block, res_block, name, tool);
     }
 
-    private void registerCommon(final Block src_block, final Block res_block, String res_block_name, boolean stonecutting) {
+    private void registerCommon(final Block src_block, final Block res_block, String res_block_name, MiningTool tool) {
         res_block_name +=  "_layer";
 
         // Register the block
@@ -377,8 +362,11 @@ public class MoreLayers implements ModInitializer {
         // Add blocks to conversion list
         blockConversions.put(src_block, res_block);
 
+        // Fill up blockTools hashmap
+        blockTools.put(res_block, tool);
+
         // Generate Block Data
-        ResourcesManager.GenerateBlockData(blockItem, src_block, stonecutting);
+        ResourcesManager.GenerateBlockData(blockItem, src_block, tool);
     }
     
     static {

@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import net.devtech.arrp.api.RRPCallback;
 import net.devtech.arrp.api.RuntimeResourcePack;
 import net.devtech.arrp.json.recipe.*;
+import net.devtech.arrp.json.tags.JTag;
 import net.devtech.arrp.json.blockstate.JBlockModel;
 import net.devtech.arrp.json.blockstate.JState;
 import net.devtech.arrp.json.blockstate.JVariant;
@@ -18,6 +19,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.BlockItem;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Pair;
 import net.minecraft.util.registry.Registry;
 
 public abstract class ResourcesManager {
@@ -44,7 +46,7 @@ public abstract class ResourcesManager {
     }
     
     public static final RuntimeResourcePack RESOURCE_PACK = RuntimeResourcePack.create(MOD_ID + ":dynamic_data");
-
+    
     private static Identifier getItemId(BlockItem item) {
         return Registry.ITEM.getId(item);
     }
@@ -257,17 +259,42 @@ public abstract class ResourcesManager {
         RESOURCE_PACK.addBlockState(state, getItemId(item));
     }
 
+    public static Map<MiningTool, Pair<JTag, String>> tagMap;
+    // Tool Tags
+    static {
+        tagMap = new HashMap<>();
+
+        tagMap.put(MiningTool.PICKAXE, new Pair<>(new JTag(), "pickaxe"));
+        tagMap.put(MiningTool.SHOVEL, new Pair<>(new JTag(), "shovel"));
+        tagMap.put(MiningTool.HOE, new Pair<>(new JTag(), "hoe"));
+    }
+
+    // Tag - put block id in correct tag to mine blocks
+    public static void AddToTag(BlockItem item, MiningTool tool) {
+        tagMap.get(tool).getLeft().add(getBlockId(item));
+    }
+
+    public static void PushTags() {
+        tagMap.forEach((k, v) -> {
+            RESOURCE_PACK.addTag(new Identifier("minecraft", "blocks/mineable/" + v.getRight()), v.getLeft());
+        });
+    }
+
     // Lang - Not doing this.
 
     // MAIN INTERFACE
 
-    public static void GenerateBlockData(BlockItem res_item, Block src_block, boolean stonecutting) {
+    public static void GenerateBlockData(BlockItem res_item, Block src_block, MiningTool tool) {
         BlockItem src_item = (BlockItem) src_block.asItem();
         
+        // Create stonecutting recipies for pickaxe blocks
+        boolean stonecutting = tool == MiningTool.PICKAXE;
+
         AddRecipe(res_item, src_item, stonecutting);
         AddLootTable(res_item);
         AddBlockStates(res_item);        
         AddModels(res_item, src_item);
+        AddToTag(res_item, tool);
     }
 
     public static void RegisterCallback() {
