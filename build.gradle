@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '0.10-SNAPSHOT'
+	id 'fabric-loom' version '1.0-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -33,8 +33,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// Advanced Runtime Resource Packs
-	modImplementation("net.devtech:arrp:0.5.4")
-	include "net.devtech:arrp:0.5.4"
+	modImplementation("net.devtech:arrp:0.6.4")
+	include "net.devtech:arrp:0.6.4"
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.

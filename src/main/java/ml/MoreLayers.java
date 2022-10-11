@@ -60,6 +60,8 @@ public class MoreLayers implements ModInitializer {
     // 1.17 Leaves
     public static Block azalea_leaves_layer;
     public static Block flowering_azalea_leaves_layer;
+    // 1.19 Leaves
+    public static Block mangrove_leaves_layer;
     
     // Stone and Variants
     public static Block andesite_layer;
@@ -81,6 +83,8 @@ public class MoreLayers implements ModInitializer {
     public static Block dirt_path_layer;
     public static Block mycelium_layer;
     public static Block podzol_layer;
+    // 1.19 Stuff
+    public static Block mud_layer;
     
     // Nether Blocks
     public static Block nether_rack_layer;
@@ -88,14 +92,12 @@ public class MoreLayers implements ModInitializer {
     public static Block basalt_layer;
     public static Block crimson_nylium_layer;
     public static Block warped_nylium_layer;
-    
-    // End Blocks
-    public static Block end_stone_layer;
-    
+
     // Misc. Blocks
     public static Block obsidian_layer;
     public static Block crying_obsidian_layer;
     public static Block hay_block_layer;
+    public static Block end_stone_layer;
 
     // Minecraft Block -> Blocklayer Block
     public static Map<Block, Block> blockConversions;
@@ -256,6 +258,7 @@ public class MoreLayers implements ModInitializer {
         mycelium_layer = registerShovelBlock(Blocks.MYCELIUM);
         grass_block_layer = registerShovelBlock(Blocks.GRASS_BLOCK);
         dirt_path_layer = registerShovelBlock(Blocks.DIRT_PATH, "grass_path");
+        mud_layer = registerShovelBlock(Blocks.MUD);
     
         hay_block_layer = registerHoeBlock(Blocks.HAY_BLOCK);
         oak_leaves_layer = registerHoeBlock(Blocks.OAK_LEAVES);
@@ -266,6 +269,7 @@ public class MoreLayers implements ModInitializer {
         acacia_leaves_layer = registerHoeBlock(Blocks.ACACIA_LEAVES);
         azalea_leaves_layer = registerHoeBlock(Blocks.AZALEA_LEAVES);
         flowering_azalea_leaves_layer = registerHoeBlock(Blocks.FLOWERING_AZALEA_LEAVES);
+        mangrove_leaves_layer = registerHoeBlock(Blocks.MANGROVE_LEAVES);
     
         sandstone_layer = registerPickaxeBlock(Blocks.SANDSTONE);
         red_sandstone_layer = registerPickaxeBlock(Blocks.RED_SANDSTONE);
@@ -313,6 +317,10 @@ public class MoreLayers implements ModInitializer {
 
     private Block registerShovelBlock(final Block block, final String name) {
         return registerBlock(block, MiningTool.SHOVEL, true, name);
+    }
+
+    private Block registerPickaxeBlock(final Block block, final boolean breakByHand) {
+        return registerBlock(block, MiningTool.PICKAXE, false);
     }
 
     private Block registerPickaxeBlock(final Block block) {

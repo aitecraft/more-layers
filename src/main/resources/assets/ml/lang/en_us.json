@@ -52,5 +52,7 @@
 	"block.ml.cobbled_deepslate_layer":"Cobbled Deepslate Layer",
 	"block.ml.deepslate_layer":"Deepslate Layer",
 	"block.ml.azalea_leaves_layer":"Azalea Leaves Layer",
-	"block.ml.flowering_azalea_leaves_layer":"Flowering Azalea Leaves Layer"
+	"block.ml.flowering_azalea_leaves_layer":"Flowering Azalea Leaves Layer",
+	"block.ml.mangrove_leaves_layer":"Mangrove Leaves Layer",
+	"block.ml.mud_layer":"Mud Layer"
 }

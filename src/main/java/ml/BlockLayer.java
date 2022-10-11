@@ -26,7 +26,7 @@ public class BlockLayer extends Block {
     protected static final VoxelShape[] LAYERS_TO_SHAPE;
     
     protected BlockLayer(final Block block, final boolean breakByHand) {
-        super(FabricBlockSettings.copyOf(block).breakByHand(breakByHand));
+        super(breakByHand ? FabricBlockSettings.copyOf(block) : FabricBlockSettings.copyOf(block).requiresTool());
         this.setDefaultState(this.getDefaultState().with(BlockLayer.LAYERS, 1));
     }
     

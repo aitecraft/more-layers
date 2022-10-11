@@ -20,8 +20,9 @@ public class MoreLayersClient implements ClientModInitializer {
         this.registerBlockColour(MoreLayers.dark_oak_leaves_layer, Blocks.DARK_OAK_LEAVES);
         this.registerBlockColour(MoreLayers.acacia_leaves_layer, Blocks.ACACIA_LEAVES);
         this.registerBlockColour(MoreLayers.jungle_leaves_layer, Blocks.JUNGLE_LEAVES);
-        this.registerBlockColour(MoreLayers.azalea_leaves_layer, Blocks.AZALEA);
-        this.registerBlockColour(MoreLayers.flowering_azalea_leaves_layer, Blocks.FLOWERING_AZALEA);
+        this.registerBlockColour(MoreLayers.azalea_leaves_layer, Blocks.AZALEA_LEAVES);
+        this.registerBlockColour(MoreLayers.flowering_azalea_leaves_layer, Blocks.FLOWERING_AZALEA_LEAVES);
+        this.registerBlockColour(MoreLayers.mangrove_leaves_layer, Blocks.MANGROVE_LEAVES);
 
         BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.oak_leaves_layer, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.birch_leaves_layer, RenderLayer.getCutout());
@@ -31,6 +32,7 @@ public class MoreLayersClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.acacia_leaves_layer, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.azalea_leaves_layer, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.flowering_azalea_leaves_layer, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(MoreLayers.mangrove_leaves_layer, RenderLayer.getCutout());
 
     }
     

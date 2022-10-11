@@ -26,7 +26,7 @@ public class BlockConcretePowderLayer extends FallingBlock {
     protected static final VoxelShape[] LAYERS_TO_SHAPE;
     
     protected BlockConcretePowderLayer(final Block block) {
-        super(FabricBlockSettings.copyOf(block).breakByHand(true));
+        super(FabricBlockSettings.copyOf(block));
         this.setDefaultState((BlockState)this.getDefaultState().with(BlockConcretePowderLayer.LAYERS, 1));
     }
     
