@@ -3,14 +3,14 @@ package ml;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.state.property.Properties;
 import net.minecraft.state.StateManager;
-import net.minecraft.world.GameMode;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.util.math.Direction;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.ai.pathing.NavigationType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.WorldView;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
@@ -74,30 +74,61 @@ public class BlockLayer extends Block {
         return itemPlacementContext_1.getStack().getItem() == this.asItem() && int_1 < 8 && (!itemPlacementContext_1.canReplaceExisting() || itemPlacementContext_1.getSide() == Direction.UP);
     }
     
-    public BlockState getPlacementState(final ItemPlacementContext itemPlacementContext_1) {
-        final BlockState blockState_1 = itemPlacementContext_1.getWorld().getBlockState(itemPlacementContext_1.getBlockPos());
-        if (blockState_1.getBlock() == this) {
-            final int oldHeight = blockState_1.get(BlockLayer.LAYERS);
+    public BlockState getPlacementState(final ItemPlacementContext ctx) {
+        final BlockState current = ctx.getWorld().getBlockState(ctx.getBlockPos());
+        final BlockState defaultState = super.getPlacementState(ctx);
+        final PlayerEntity player = ctx.getPlayer();
+        final World world = ctx.getWorld();
+        final boolean server = !world.isClient();
+        
+        // Adding onto existing BlockLayer
+        if (current.getBlock() == this) {
+            final int oldHeight = current.get(BlockLayer.LAYERS);
             int newHeight = oldHeight + 1;
-            if (itemPlacementContext_1.getPlayer().isSneaking()) {
-                newHeight += 3;
-            }
+            if (player.isSneaking()) newHeight += 3;
             newHeight = Math.min(8, newHeight);
-            if (!itemPlacementContext_1.getWorld().isClient()  && ((ServerPlayerEntity)itemPlacementContext_1.getPlayer()).interactionManager.getGameMode() == GameMode.SURVIVAL) {
-                newHeight = Math.min(itemPlacementContext_1.getStack().getCount() + oldHeight, newHeight);
-                itemPlacementContext_1.getStack().decrement(newHeight - oldHeight - 1);
-            }
-            return blockState_1.with(BlockLayer.LAYERS, newHeight);
+
+            final boolean survival = !player.getAbilities().creativeMode;
+
+            // This code runs on the client as well, and helps to improve the client-side prediction
+            if (survival) newHeight = Math.min(ctx.getStack().getCount() + oldHeight, newHeight);
+
+            BlockState possible = defaultState.with(BlockLayer.LAYERS, newHeight);
+            
+            // Decrement the extra blocks only if:
+            // 1. Code is running on server
+            // 2. Player is in survival mode
+            // 3. Placement is actually possible
+            if (server && survival &&
+                world.canPlace(possible, ctx.getBlockPos(), ShapeContext.of(player)) &&
+                possible.canPlaceAt(world, ctx.getBlockPos())
+            )
+                ctx.getStack().decrement(newHeight - oldHeight - 1); // 1 will be deducted by Minecraft code
+
+            return possible;
         }
-        if (itemPlacementContext_1.getPlayer().isSneaking() && (itemPlacementContext_1.canReplaceExisting() || itemPlacementContext_1.getWorld().getBlockState(new BlockPos(itemPlacementContext_1.getHitPos())).isAir())) {
-            int newHeight2 = 4;
-            if (!itemPlacementContext_1.getWorld().isClient() && ((ServerPlayerEntity)itemPlacementContext_1.getPlayer()).interactionManager.getGameMode() == GameMode.SURVIVAL) {
-                newHeight2 = Math.min(itemPlacementContext_1.getStack().getCount(), newHeight2);
-                itemPlacementContext_1.getStack().decrement(newHeight2 - 1);
-            }
-            return super.getPlacementState(itemPlacementContext_1).with(BlockLayer.LAYERS, newHeight2);
+
+        // Existing is replaceable or air
+        // Place 4 at once when sneaking
+        if (player.isSneaking() && (ctx.canReplaceExisting() || world.getBlockState(new BlockPos(ctx.getHitPos())).isAir())) {
+            int newHeight = 4;
+            
+            final boolean survival = !player.getAbilities().creativeMode;
+
+            if (survival) newHeight = Math.min(ctx.getStack().getCount(), newHeight);
+
+            BlockState possible = defaultState.with(BlockLayer.LAYERS, newHeight);
+
+            if (server && survival &&
+                world.canPlace(possible, ctx.getBlockPos(), ShapeContext.of(player)) &&
+                possible.canPlaceAt(world, ctx.getBlockPos())
+            )
+                ctx.getStack().decrement(newHeight - 1);
+
+            return possible;
         }
-        return super.getPlacementState(itemPlacementContext_1);
+
+        return defaultState;
     }
     
     protected void appendProperties(final StateManager.Builder<Block, BlockState> stateFactory$Builder_1) {
