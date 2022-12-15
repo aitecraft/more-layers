@@ -10,17 +10,17 @@ import net.devtech.arrp.api.RuntimeResourcePack;
 import net.devtech.arrp.json.recipe.*;
 import net.devtech.arrp.json.tags.JTag;
 import net.devtech.arrp.json.blockstate.JBlockModel;
-import net.devtech.arrp.json.blockstate.JState;
-import net.devtech.arrp.json.blockstate.JVariant;
+import net.devtech.arrp.json.blockstate.JBlockStates;
+import net.devtech.arrp.json.blockstate.JVariants;
 import net.devtech.arrp.json.loot.*;
 import net.devtech.arrp.json.models.JModel;
 import net.devtech.arrp.json.models.JTextures;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.BlockItem;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
-import net.minecraft.util.registry.Registry;
 
 public abstract class ResourcesManager {
 
@@ -48,11 +48,11 @@ public abstract class ResourcesManager {
     public static final RuntimeResourcePack RESOURCE_PACK = RuntimeResourcePack.create(MOD_ID + ":dynamic_data");
     
     private static Identifier getItemId(BlockItem item) {
-        return Registry.ITEM.getId(item);
+        return Registries.ITEM.getId(item);
     }
 
     private static Identifier getBlockId(BlockItem item) {
-        return Registry.BLOCK.getId(item.getBlock());
+        return Registries.BLOCK.getId(item.getBlock());
     }
 
     /**
@@ -102,21 +102,14 @@ public abstract class ResourcesManager {
         JRecipe recipe;
 
         if (stonecutting) {
-            recipe = JRecipe.stonecutting(
-                // Take src_item
-                JIngredient.ingredient().item(src_item),
-                // Give MAX_LAYERS of res_item
-                JResult.itemStack(res_item, MAX_LAYERS)
-            );
+            recipe = new JStonecuttingRecipe(src_item, res_item, MAX_LAYERS);
         } else {
-            recipe = JRecipe.shaped(
-                JPattern.pattern("##"),
-                JKeys.keys().key(
-                    "#",
-                    JIngredient.ingredient().item(src_item)
-                ),
-                JResult.itemStack(res_item, MAX_LAYERS * 2)
-            );
+            recipe = 
+                new JShapedRecipe(res_item)
+                .resultCount(MAX_LAYERS * 2)
+                .pattern(new JPattern("##"))
+                .addKey("#", src_item)
+            ;
         }
 
         RESOURCE_PACK.addRecipe(getItemId(res_item), recipe);
@@ -129,7 +122,7 @@ public abstract class ResourcesManager {
      */
 
     public static void AddLootTable(BlockItem item) {
-        JEntry root_entry = JLootTable.entry().type("minecraft:alternatives");
+        JEntry root_entry = new JEntry().type("minecraft:alternatives");
 
         for (int i = 1; i <= MAX_LAYERS; i++) {
             
@@ -180,7 +173,7 @@ public abstract class ResourcesManager {
             }
             */
             JEntry child_entry = 
-                JLootTable.entry()
+                new JEntry()
                 .type("minecraft:item")
                 .condition(condition)
                 .function(function)
@@ -192,9 +185,9 @@ public abstract class ResourcesManager {
 
         RESOURCE_PACK.addLootTable(
             createId(item, "blocks"),
-            JLootTable.loot("minecraft:block")
+            new JLootTable("minecraft:block")
             .pool(
-                JLootTable.pool()
+                new JPool()
                 .rolls(1)
                 .entry(root_entry)
                 .condition(
@@ -248,13 +241,11 @@ public abstract class ResourcesManager {
 
     // Blockstates - to link with block models
     public static void AddBlockStates(BlockItem item) {
-        JState state = new JState();
-        
-        JVariant variant = new JVariant();
-        for (int i = 1; i <= MAX_LAYERS; i++) {
-            variant.put("layers=" + i, new JBlockModel(createId(item, "block", i * HEIGHT_PER_LAYER)));
+        JVariants variants = new JVariants();
+        for (int i = 1; i <= MAX_LAYERS; i++) {	
+            variants.addVariant("layers=" + i, new JBlockModel(createId(item, "block", i * HEIGHT_PER_LAYER)));
         }
-        state.add(variant);
+        JBlockStates state = JBlockStates.ofVariants(variants);
         
         RESOURCE_PACK.addBlockState(state, getItemId(item));
     }
@@ -298,6 +289,6 @@ public abstract class ResourcesManager {
     }
 
     public static void RegisterCallback() {
-        RRPCallback.AFTER_VANILLA.register(a -> a.add(RESOURCE_PACK));
+        RRPCallback.BEFORE_VANILLA.register(a -> a.add(RESOURCE_PACK));
     }
 }

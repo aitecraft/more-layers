@@ -4,7 +4,8 @@ import java.util.Hashtable;
 import java.util.Map;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -12,20 +13,20 @@ import net.minecraft.block.SnowBlock;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.HoeItem;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.item.PickaxeItem;
 import net.minecraft.item.ShovelItem;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
 
 public class MoreLayers implements ModInitializer {
     public static ItemGroup itemGroup;
-    
     
     // Concrete Powder Stuff (FALLING)
     public static Block white_concrete_powder_layer;
@@ -104,13 +105,15 @@ public class MoreLayers implements ModInitializer {
 
     // BlockLayer Block -> Mining Tool
     public static Map<Block, MiningTool> blockTools;
-    
+
     public void onInitialize() {
-        MoreLayers.itemGroup = FabricItemGroupBuilder.create(new Identifier("ml", "layers")).appendItems(itemStacks -> Registry.ITEM.forEach(item -> {
-            if (Registry.ITEM.getId(item).getNamespace().equals("ml") || Registry.ITEM.getId(item).getPath().equals("snow")) {
-                itemStacks.add(new ItemStack((ItemConvertible)item));
-            }
-        })).icon(() -> new ItemStack((ItemConvertible)MoreLayers.grass_block_layer)).build();
+        MoreLayers.itemGroup = FabricItemGroup.builder(new Identifier("ml", "layers"))
+            .icon(() -> new ItemStack(MoreLayers.grass_block_layer))
+            .entries((enabledFeatures, entries, operatorEnabled) -> {
+                entries.add(Items.SNOW);
+            })
+            .build();
+
         this.registerBlocks();
         ResourcesManager.PushTags();
                 
@@ -185,8 +188,9 @@ public class MoreLayers implements ModInitializer {
 
     /**
      * ONLY CALL FOR MORELAYERS BLOCKS
+     * 
      * @param block : A MoreLayers Block
-     * @param item : The item used by the player
+     * @param item  : The item used by the player
      * @return <code>true</code>, if <code>item</code> is the correct tool to mine <code>block</code>
      */
     private boolean isCorrectTool(Block block, Item item) {
@@ -197,7 +201,7 @@ public class MoreLayers implements ModInitializer {
 
         boolean isCorrect = false;
 
-        switch(correctTool) {
+        switch (correctTool) {
             case PICKAXE:
                 isCorrect = item instanceof PickaxeItem;
                 break;
@@ -361,11 +365,12 @@ public class MoreLayers implements ModInitializer {
         res_block_name +=  "_layer";
 
         // Register the block
-        Registry.register(Registry.BLOCK, new Identifier("ml", res_block_name), res_block);
+        Registry.register(Registries.BLOCK, new Identifier("ml", res_block_name), res_block);
         
         // Create and register BlockItem
-        final BlockItem blockItem = new BlockItem(res_block, new Item.Settings().group(MoreLayers.itemGroup));
-        Registry.register(Registry.ITEM, new Identifier("ml", res_block_name), blockItem);
+        final BlockItem blockItem = new BlockItem(res_block, new Item.Settings());
+        Registry.register(Registries.ITEM, new Identifier("ml", res_block_name), blockItem);
+        ItemGroupEvents.modifyEntriesEvent(MoreLayers.itemGroup).register(entries -> entries.add(blockItem));
         
         // Add blocks to conversion list
         blockConversions.put(src_block, res_block);
